@@ -57,6 +57,24 @@ func TestProtobufify(t *testing.T) {
 	}
 }
 
+func TestProtoBufScopeFieldAvoidsMessageMethods(t *testing.T) {
+	scope := &protoBufScope{scope: codegen.NewNameScope()}
+	att := &expr.AttributeExpr{Type: expr.String}
+	cases := map[string]string{
+		"reset":         "Reset_",
+		"string":        "String_",
+		"descriptor":    "Descriptor_",
+		"proto_message": "ProtoMessage_",
+		"reset_mode":    "ResetMode",
+		"name":          "Name",
+	}
+	for name, want := range cases {
+		assert.Equal(t, want, scope.Field(att, name, true), name)
+	}
+	// The lower-case form names the proto field, which protoc-gen-go leaves alone.
+	assert.Equal(t, "reset", scope.Field(att, "reset", false))
+}
+
 func TestProtoNativeType(t *testing.T) {
 	cases := []struct {
 		Name     string

@@ -45,7 +45,37 @@ func (p *protoBufScope) Ref(att *expr.AttributeExpr, pkg string) string {
 // NOTE: protoc does not care about common initialisms like api -> API so we
 // first transform the name into snake case to end up with Api.
 func (*protoBufScope) Field(att *expr.AttributeExpr, name string, firstUpper bool) string {
-	return protoBufifyAtt(att, codegen.SnakeCase(name), firstUpper)
+	field := protoBufifyAtt(att, codegen.SnakeCase(name), firstUpper)
+	if firstUpper {
+		field = protoBufGoFieldName(field)
+	}
+	return field
+}
+
+// protoGoMethodNames lists the methods protoc-gen-go may attach to a generated
+// message. protoc-gen-go appends underscores to a field Go name until it
+// collides with none of them (see protogen's field name conflict resolution).
+var protoGoMethodNames = map[string]struct{}{
+	"Reset":               {},
+	"String":              {},
+	"ProtoMessage":        {},
+	"Marshal":             {},
+	"Unmarshal":           {},
+	"ExtensionRangeArray": {},
+	"ExtensionMap":        {},
+	"Descriptor":          {},
+}
+
+// protoBufGoFieldName returns the Go name protoc-gen-go gives a field whose
+// CamelCase name is name, so that a field such as "reset" maps to Reset_ and
+// not to the message's Reset method.
+func protoBufGoFieldName(name string) string {
+	for {
+		if _, ok := protoGoMethodNames[name]; !ok {
+			return name
+		}
+		name += "_"
+	}
 }
 
 // Scope returns the name scope.
